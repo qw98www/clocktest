@@ -1,5 +1,7 @@
 # cat-gatekeeper-desktop-test
 
+Repository: clocktest
+
 A test-only desktop prototype inspired by break reminder workflows.
 
 ## Important notice

@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 
 let mainWindow = null;
 let breakWindow = null;
@@ -380,5 +381,5 @@ ipcMain.handle('break:endNow', () => {
 });
 
 ipcMain.handle('asset:getPath', (_event, filename) => {
-  return `file://${path.join(__dirname, 'renderer', 'assets', filename)}`;
+  return pathToFileURL(path.join(__dirname, 'renderer', 'assets', filename)).href;
 });

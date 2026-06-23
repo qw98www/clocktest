@@ -4,6 +4,16 @@ const breakInput = document.getElementById('breakMinutes');
 const launchAtLoginInput = document.getElementById('launchAtLogin');
 const statusText = document.getElementById('statusText');
 const nextBreakText = document.getElementById('nextBreakText');
+const api = window.desktopApi;
+
+if (!api) {
+  statusText.textContent = 'Bridge unavailable';
+  nextBreakText.textContent = 'Restart app. If this persists, preload failed to load.';
+  document.querySelectorAll('button, input').forEach((el) => {
+    el.disabled = true;
+  });
+  throw new Error('desktopApi is not available in renderer');
+}
 
 function formatMsAsClock(ms) {
   if (!Number.isFinite(ms) || ms <= 0) return '00:00';
@@ -42,12 +52,12 @@ function render(state) {
 }
 
 async function refresh() {
-  const state = await window.desktopApi.getState();
+  const state = await api.getState();
   render(state);
 }
 
 document.getElementById('saveBtn').addEventListener('click', async () => {
-  await window.desktopApi.saveSettings({
+  await api.saveSettings({
     enabled: enabledInput.checked,
     intervalMinutes: Number.parseInt(intervalInput.value, 10),
     breakMinutes: Number.parseInt(breakInput.value, 10),
@@ -57,21 +67,21 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('startBtn').addEventListener('click', async () => {
-  await window.desktopApi.startTimer();
+  await api.startTimer();
   await refresh();
 });
 
 document.getElementById('pauseBtn').addEventListener('click', async () => {
-  await window.desktopApi.pauseTimer();
+  await api.pauseTimer();
   await refresh();
 });
 
 document.getElementById('skipBtn').addEventListener('click', async () => {
-  await window.desktopApi.skipTimer();
+  await api.skipTimer();
   await refresh();
 });
 
-window.desktopApi.onStateUpdate((state) => {
+api.onStateUpdate((state) => {
   render(state);
 });
 

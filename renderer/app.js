@@ -75,4 +75,7 @@ window.desktopApi.onStateUpdate((state) => {
   render(state);
 });
 
-void refresh();
+refresh().catch((err) => {
+  console.error('Failed to refresh initial state:', err);
+  statusText.textContent = 'Error loading state';
+});

@@ -293,6 +293,9 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.webContents.on('did-finish-load', () => {
+    sendState();
+  });
   mainWindow.on('close', (event) => {
     if (isQuitting) {
       return;

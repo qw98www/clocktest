@@ -18,30 +18,39 @@ function showFallback() {
   fallback.style.display = 'block';
 }
 
-function initializeVideos() {
-  introVideo.src = './assets/assets1.webm';
-  loopVideo.src = './assets/assets2.webm';
-  loopVideo.loop = true;
+async function initializeVideos() {
+  try {
+    const introPath = await window.desktopApi.getAssetPath('assets1.webm');
+    const loopPath = await window.desktopApi.getAssetPath('assets2.webm');
+    
+    introVideo.src = introPath;
+    loopVideo.src = loopPath;
+    loopVideo.loop = true;
 
-  introVideo.addEventListener('ended', () => {
-    introVideo.style.display = 'none';
-    loopVideo.style.display = 'block';
-    loopVideo.play().catch(() => {
+    introVideo.addEventListener('ended', () => {
+      introVideo.style.display = 'none';
+      loopVideo.style.display = 'block';
+      loopVideo.play().catch(() => {
+        console.error('Failed to play loop video');
+        showFallback();
+      });
+    }, { once: true });
+
+    introVideo.addEventListener('error', (e) => {
+      console.error('Intro video error:', e);
       showFallback();
     });
-  }, { once: true });
 
-  introVideo.addEventListener('error', () => {
-    showFallback();
-  });
+    loopVideo.addEventListener('error', (e) => {
+      console.error('Loop video error:', e);
+      showFallback();
+    });
 
-  loopVideo.addEventListener('error', () => {
+    await introVideo.play();
+  } catch (error) {
+    console.error('Failed to initialize videos:', error);
     showFallback();
-  });
-
-  introVideo.play().catch(() => {
-    showFallback();
-  });
+  }
 }
 
 function render(state) {

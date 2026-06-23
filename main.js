@@ -373,3 +373,7 @@ ipcMain.handle('break:endNow', () => {
   finishBreak();
   return publicState();
 });
+
+ipcMain.handle('asset:getPath', (_event, filename) => {
+  return `file://${path.join(__dirname, 'renderer', 'assets', filename)}`;
+});

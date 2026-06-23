@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const path = require('path');
 
 contextBridge.exposeInMainWorld('desktopApi', {
   getState: () => ipcRenderer.invoke('state:get'),
@@ -7,6 +8,7 @@ contextBridge.exposeInMainWorld('desktopApi', {
   pauseTimer: () => ipcRenderer.invoke('timer:pause'),
   skipTimer: () => ipcRenderer.invoke('timer:skip'),
   endBreakNow: () => ipcRenderer.invoke('break:endNow'),
+  getAssetPath: (filename) => ipcRenderer.invoke('asset:getPath', filename),
   onStateUpdate: (cb) => {
     const listener = (_event, nextState) => cb(nextState);
     ipcRenderer.on('state:update', listener);

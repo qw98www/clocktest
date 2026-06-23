@@ -1,6 +1,7 @@
 const enabledInput = document.getElementById('enabled');
 const intervalInput = document.getElementById('intervalMinutes');
 const breakInput = document.getElementById('breakMinutes');
+const launchAtLoginInput = document.getElementById('launchAtLogin');
 const statusText = document.getElementById('statusText');
 const nextBreakText = document.getElementById('nextBreakText');
 
@@ -16,6 +17,7 @@ function render(state) {
   enabledInput.checked = !!state.enabled;
   intervalInput.value = state.intervalMinutes;
   breakInput.value = state.breakMinutes;
+  launchAtLoginInput.checked = !!state.launchAtLogin;
 
   if (!state.enabled) {
     statusText.textContent = 'Disabled';
@@ -49,6 +51,7 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     enabled: enabledInput.checked,
     intervalMinutes: Number.parseInt(intervalInput.value, 10),
     breakMinutes: Number.parseInt(breakInput.value, 10),
+    launchAtLogin: launchAtLoginInput.checked,
   });
   await refresh();
 });

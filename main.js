@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -6,6 +6,8 @@ let mainWindow = null;
 let breakWindow = null;
 let breakInterval = null;
 let tickTimer = null;
+let tray = null;
+let isQuitting = false;
 
 const DEFAULT_SETTINGS = {
   enabled: true,
@@ -15,6 +17,7 @@ const DEFAULT_SETTINGS = {
 
 const state = {
   ...DEFAULT_SETTINGS,
+  launchAtLogin: false,
   isRunning: false,
   isOnBreak: false,
   nextBreakAt: null,
@@ -32,6 +35,7 @@ function loadSettings() {
     state.enabled = parsed.enabled !== false;
     state.intervalMinutes = clampNumber(parsed.intervalMinutes, 1, 240, DEFAULT_SETTINGS.intervalMinutes);
     state.breakMinutes = clampNumber(parsed.breakMinutes, 1, 60, DEFAULT_SETTINGS.breakMinutes);
+    state.launchAtLogin = parsed.launchAtLogin === true;
   } catch (_error) {
     saveSettings();
   }
@@ -42,6 +46,7 @@ function saveSettings() {
     enabled: state.enabled,
     intervalMinutes: state.intervalMinutes,
     breakMinutes: state.breakMinutes,
+    launchAtLogin: state.launchAtLogin,
   };
   fs.writeFileSync(settingsPath(), JSON.stringify(payload, null, 2), 'utf8');
 }
@@ -57,6 +62,7 @@ function publicState() {
     enabled: state.enabled,
     intervalMinutes: state.intervalMinutes,
     breakMinutes: state.breakMinutes,
+    launchAtLogin: state.launchAtLogin,
     isRunning: state.isRunning,
     isOnBreak: state.isOnBreak,
     nextBreakAt: state.nextBreakAt,
@@ -66,8 +72,100 @@ function publicState() {
 }
 
 function sendState() {
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send('state:update', publicState());
+  const snapshot = publicState();
+  BrowserWindow.getAllWindows().forEach((win) => {
+    if (!win.isDestroyed()) {
+      win.webContents.send('state:update', snapshot);
+    }
+  });
+  rebuildTrayMenu();
+}
+
+function setLaunchAtLogin(enabled) {
+  state.launchAtLogin = !!enabled;
+  if (!app.isPackaged) {
+    return;
+  }
+  try {
+    app.setLoginItemSettings({ openAtLogin: state.launchAtLogin });
+  } catch (_error) {
+    state.launchAtLogin = false;
+  }
+}
+
+function showMainWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    createMainWindow();
+    return;
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function rebuildTrayMenu() {
+  if (!tray) return;
+
+  const runPauseLabel = state.isRunning ? 'Pause Timer' : 'Start Timer';
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Show Control Panel',
+      click: () => showMainWindow(),
+    },
+    {
+      label: runPauseLabel,
+      click: () => {
+        if (state.isRunning) {
+          pauseTimer();
+        } else {
+          startTimer();
+        }
+      },
+    },
+    {
+      label: 'Skip Current Cycle',
+      click: () => skipToNextCycle(),
+    },
+    { type: 'separator' },
+    {
+      label: 'Launch At Login',
+      type: 'checkbox',
+      checked: !!state.launchAtLogin,
+      click: (menuItem) => {
+        setLaunchAtLogin(menuItem.checked);
+        saveSettings();
+        sendState();
+      },
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(menu);
+  tray.setToolTip('Cat Gatekeeper Desktop Test');
+
+  if (state.isOnBreak) {
+    tray.setTitle('CatTest BREAK');
+  } else if (state.isRunning) {
+    tray.setTitle('CatTest ON');
+  } else if (!state.enabled) {
+    tray.setTitle('CatTest OFF');
+  } else {
+    tray.setTitle('CatTest PAUSE');
+  }
+}
+
+function createTray() {
+  if (tray) return;
+  const icon = nativeImage.createEmpty();
+  tray = new Tray(icon);
+  tray.on('click', () => showMainWindow());
+  rebuildTrayMenu();
 }
 
 function resetNextBreak() {
@@ -195,6 +293,13 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.on('close', (event) => {
+    if (isQuitting) {
+      return;
+    }
+    event.preventDefault();
+    mainWindow.hide();
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -202,15 +307,23 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   loadSettings();
+  try {
+    state.launchAtLogin = !!app.getLoginItemSettings().openAtLogin;
+  } catch (_error) {
+    state.launchAtLogin = false;
+  }
   createMainWindow();
+  createTray();
   startTick();
   startTimer();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
-    }
+    showMainWindow();
   });
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 app.on('window-all-closed', () => {
@@ -225,6 +338,9 @@ ipcMain.handle('settings:save', (_event, nextSettings) => {
   state.enabled = nextSettings.enabled !== false;
   state.intervalMinutes = clampNumber(nextSettings.intervalMinutes, 1, 240, DEFAULT_SETTINGS.intervalMinutes);
   state.breakMinutes = clampNumber(nextSettings.breakMinutes, 1, 60, DEFAULT_SETTINGS.breakMinutes);
+  if (typeof nextSettings.launchAtLogin === 'boolean') {
+    setLaunchAtLogin(nextSettings.launchAtLogin);
+  }
   saveSettings();
 
   if (!state.enabled) {

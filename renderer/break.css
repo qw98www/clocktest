@@ -24,6 +24,30 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
+.media-container {
+  width: 100%;
+  min-height: 200px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  background: #f3f4f6;
+}
+
+.break-video {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.fallback-content {
+  width: 100%;
+  min-height: 200px;
+  display: grid;
+  place-items: center;
+}
+
 .cat {
   font-size: 54px;
 }

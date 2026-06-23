@@ -8,7 +8,13 @@
   </head>
   <body>
     <main class="break-wrap">
-      <div class="cat">=^.^=</div>
+      <div id="mediaContainer" class="media-container">
+        <video id="introVideo" autoplay muted playsinline preload="auto" class="break-video"></video>
+        <video id="loopVideo" muted playsinline preload="auto" class="break-video" style="display:none"></video>
+        <div id="fallback" class="fallback-content" style="display:none">
+          <div class="cat">=^.^=</div>
+        </div>
+      </div>
       <h1>Break Time</h1>
       <p>Look away from screen, relax your eyes and neck.</p>
       <p class="timer" id="timer">--:--</p>
